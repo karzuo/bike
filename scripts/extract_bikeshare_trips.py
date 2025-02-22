@@ -55,7 +55,7 @@ def extract_bikeshare_trips(**kwargs):
     # TODO make bucket configurable
     df.write \
         .format("parquet") \
-        .mode("overwrite") \
+        .mode("append") \
         .partitionBy("partition_date", "partition_hour") \
         .save("gs://bike-share-hw/bikeshare")
 
