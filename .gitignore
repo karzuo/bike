@@ -169,3 +169,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# service account json
+service_account.json
+
+#mac
+.DS_Store
