@@ -175,3 +175,6 @@ service_account.json
 
 #mac
 .DS_Store
+
+# jar files
+*.jar
