@@ -1,70 +1,67 @@
+from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
+from google.cloud import storage
+import constants
 
 
-# Create a Spark session
-spark = SparkSession.builder \
-    .appName("BikeShareEtl") \
-    .master("local[*]")  \
-    .config('spark.jars', 'jars/spark-3.5-bigquery-0.42.0.jar,jars/gcs-connector-3.0.4-shaded.jar') \
-    .config("spark.hadoop.fs.gs.impl", 'com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem') \
-    .config("spark.hadoop.google.cloud.auth.service.account.enable", 'true') \
-    .config("spark.hadoop.google.cloud.auth.type", 'SERVICE_ACCOUNT_JSON_KEYFILE') \
-    .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", 'scripts/service_account.json') \
-    .getOrCreate()
+def extract_bikeshare_trips(**kwargs):
+    date_of_run=datetime.strptime(kwargs['date_of_run'], '%Y-%m-%d').date()
 
-# # Bigquery table
-# project_id = "bigquery-public-data"
-# dataset_id = "austin_bikeshare"
-# table_id = "bikeshare_trips" 
+    # Create a Spark session
+    spark = SparkSession.builder \
+        .appName("BikeShareEtl") \
+        .master("local[*]")  \
+        .config("spark.sql.session.timeZone", "UTC") \
+        .config('spark.jars', 'jars/spark-3.5-bigquery-0.42.0.jar,jars/gcs-connector-3.0.4-shaded.jar') \
+        .config("spark.hadoop.fs.gs.impl", 'com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem') \
+        .config("spark.hadoop.google.cloud.auth.service.account.enable", 'true') \
+        .config("spark.hadoop.google.cloud.auth.type", 'SERVICE_ACCOUNT_JSON_KEYFILE') \
+        .getOrCreate()
+        
+    # Set GCS credential
+    spark._jsc.hadoopConfiguration().set("google.cloud.auth.service.account.json.keyfile", 'scripts/service_account.json')
 
-# Read data from BigQuery
-# df = spark.read \
-#     .format("bigquery") \
-#     .option("project", project_id) \
-#     .option("dataset", dataset_id) \
-#     .option("table", table_id) \
-#     .load()
+    # Data details
+    project_id='bigquery-public-data'
+    dataset_id='austin_bikeshare'
+    table_id='bikeshare_trips'
+    prev_day = (date_of_run + timedelta(days=constants.DAY_OFFSET)).strftime('%Y-%m-%d')
 
-# # BigQuery SQL query to fetch data for the previous day
-# query = f"""
-# SELECT *
-# FROM `bigquery-public-data.austin_bikeshare.bikeshare_trips`
-# WHERE DATE(start_time) = '{previous_day}'
-# """
+    # Read data from BigQuery
+    df = spark.read \
+        .format("bigquery") \
+        .option("project", project_id) \
+        .option("dataset", dataset_id) \
+        .option("table", table_id) \
+        .load()
+        
+    df = df.where(f"DATE(start_time) = '{prev_day}'")
 
-# # Read data from BigQuery using the SQL query
-# df = spark.read.format('bigquery') \
-#     .option('query', query) \
-#     .load()
+    # Create partition columns
+    df = df.withColumn('partition_date', to_date(col("start_time")))
+    df = df.withColumn('partition_hour', hour(col("start_time")))
 
-# Test the setup
-data = [("Alice", "2024-02-27 10:30:45.123"), ("Bob", "2024-02-27 16:30:45.123"), ("Charlie", "2024-02-28 17:30:45.123")]
-df = spark.createDataFrame(data, ["Name", "start_time"])
+    # Delete partition before backfilling to ensure idempotency
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket('bike-share-hw')
+
+    blobs = bucket.list_blobs(prefix=f'bikeshare/{prev_day}')
+
+    for blob in blobs:
+        blob.delete()
+
+    # Write to GCS
+    # TODO make bucket configurable
+    df.write \
+        .format("parquet") \
+        .mode("overwrite") \
+        .partitionBy("partition_date", "partition_hour") \
+        .save("gs://bike-share-hw/bikeshare")
+
+    # Stop the Spark session
+    spark.stop()
     
-# # Filter for previous day
-# df = df.filter("DATE(start_time)='2024-06-20'")
 
-# Create partition columns
-df = df.withColumn('partition_date', to_date(col("start_time")))
-df = df.withColumn('partition_hour', hour(col("start_time")))
-
-# # Sort by time
-# df = df.orderBy("start_time", ascending=True)
-
-# Write to GCS
-# df.show()
-# df.write.parquet(
-#     'testpq',
-#     mode="overwrite",
-#     partitionBy=['partition_date', 'partition_hour']
-# )
-# df.write \
-#     .format("parquet") \
-#     .mode("overwrite") \
-#     .partitionBy("partition_date", "partition_hour") \
-#     .save("gs://bike-share-hw/testpq")
-
-spark.read.parquet('gs://bike-share-hw/testpq').show()
-# Stop the Spark session
-spark.stop()
+if __name__ == "__main__":
+    extract_bikeshare_trips(date_of_run='2024-06-20')

@@ -12,6 +12,8 @@ services:
     ports:
       - "8080:8080"    # Spark Web UI
       - "7077:7077"    # Spark Master port for worker connections
+    volumes:
+      - ./scripts:/scripts
     networks:
       - spark-network
 
@@ -21,6 +23,8 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER=spark://spark-master:7077  # Point to the master service
+    volumes:
+      - ./scripts:/scripts
     networks:
       - spark-network
     depends_on:
