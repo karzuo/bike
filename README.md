@@ -22,3 +22,10 @@ https://cloud.google.com/bigquery/docs/external-data-cloud-storage?utm_source=go
 * big lake not created due to costs, but is just one small step
 
 * set google credentials env var
+
+
+Setup Airflow:
+generate fernet key and replace in docker-compose
+docker-compose run --rm airflow-webserver airflow db init
+docker-compose run --rm airflow-webserver airflow users create --role Admin --username admin --email admin --firstname admin --lastname admin --password admin
+docker-compose up

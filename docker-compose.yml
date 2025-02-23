@@ -1,35 +1,97 @@
-version: '3.7'
-
+version: '3.8'
 services:
-  spark-master:
-    image: bitnami/spark:latest
-    container_name: spark-master
+  postgres:
+    image: postgres:13
     environment:
-      - SPARK_MODE=master
-      - SPARK_MASTER_HOST=spark-master
-      - SPARK_MASTER_PORT=7077
-      - SPARK_MASTER_WEBUI_PORT=8080
-    ports:
-      - "8080:8080"    # Spark Web UI
-      - "7077:7077"    # Spark Master port for worker connections
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
     volumes:
-      - ./scripts:/scripts
+      - postgres_data:/var/lib/postgresql/data
     networks:
-      - spark-network
+      - airflow_net
 
-  spark-worker:
-    image: bitnami/spark:latest
-    container_name: spark-worker
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER=spark://spark-master:7077  # Point to the master service
-    volumes:
-      - ./scripts:/scripts
+  redis:
+    image: redis:latest
     networks:
-      - spark-network
+      - airflow_net
+
+  airflow-webserver:
+    build:
+      dockerfile: Dockerfile
+    container_name: airflow-webserver
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=GCddlAeVaQWLPyr7Le9eyWVwI3I9BIOhpI02ErJ-Wt4=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW_WWW_USER_USERNAME=airflow
+      - AIRFLOW_WWW_USER_PASSWORD=airflow
+      - AIRFLOW__WEBSERVER__ENABLE_CSRF=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=wZQhGLrYlA9g3p9Zh8xV9o44U0HeJWywsJ6T2fE0cnY=
+    ports:
+      - "8080:8080"
     depends_on:
-      - spark-master
+      - postgres
+      - redis
+    networks:
+      - airflow_net
+    command: webserver
+
+  airflow-scheduler:
+    build:
+      dockerfile: Dockerfile
+    container_name: airflow-scheduler
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=GCddlAeVaQWLPyr7Le9eyWVwI3I9BIOhpI02ErJ-Wt4=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=wZQhGLrYlA9g3p9Zh8xV9o44U0HeJWywsJ6T2fE0cnY=
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - airflow_net
+    command: scheduler
+
+  airflow-worker:
+    build:
+      dockerfile: Dockerfile
+    container_name: airflow-worker
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=GCddlAeVaQWLPyr7Le9eyWVwI3I9BIOhpI02ErJ-Wt4=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=wZQhGLrYlA9g3p9Zh8xV9o44U0HeJWywsJ6T2fE0cnY=
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - airflow_net
+    command: celery worker
+
+  flower:
+    build:
+      dockerfile: Dockerfile
+    container_name: airflow-flower
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=wZQhGLrYlA9g3p9Zh8xV9o44U0HeJWywsJ6T2fE0cnY=
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    networks:
+      - airflow_net
+    command: celery flower
 
 networks:
-  spark-network:
+  airflow_net:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
