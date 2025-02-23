@@ -73,4 +73,4 @@ def extract_bikeshare_trips(**kwargs):
     
 # TODO remove hardcode
 if __name__ == "__main__":
-    extract_bikeshare_trips(date_of_run='2024-06-20')
+    extract_bikeshare_trips(date_of_run='2024-04-30')

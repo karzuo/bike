@@ -1,0 +1,112 @@
+1. **Find the total number of trips for each day.**
+
+SELECT 
+    partition_date as date,
+    count(trip_id) as trip_count
+FROM `bike-451619.tech_homework.bikeshare`
+GROUP BY partition_date
+
+
+2. **Calculate the average trip duration for each day.**
+
+SELECT 
+    partition_date as date,
+    AVG(duration_minutes) as trip_trip_duration_minutes
+FROM `bike-451619.tech_homework.bikeshare`
+GROUP BY partition_date
+
+
+3. **Identify the top 5 stations with the highest number of trip starts.**
+
+SELECT
+    start_station_id,
+    start_station_name,
+    count(trip_id) as trip_start_count
+FROM `bike-451619.tech_homework.bikeshare`
+GROUP BY start_station_id, start_station_name
+ORDER BY count(trip_id) DESC
+LIMIT 5
+
+
+4. **Find the average number of trips per hour of the day.**
+
+SELECT
+    partition_hour as hour_of_the_day,
+    COUNT(trip_id)/ COUNT(DISTINCT partition_date) as average_trip_count
+FROM `bike-451619.tech_homework.bikeshare`
+GROUP BY partition_hour
+ORDER BY partition_hour ASC
+
+
+5. **Determine the most common trip route (start station to end station).**
+
+WITH rank_popularity AS (
+  SELECT
+    start_station_id,
+    start_station_name,
+    end_station_id,
+    end_station_name,
+    COUNT(trip_id) as trip_route_count,
+    rank() OVER (ORDER BY COUNT(trip_id) DESC) as ranking
+  FROM `bike-451619.tech_homework.bikeshare`
+  GROUP BY start_station_id,start_station_name, end_station_id, end_station_name
+)
+SELECT *
+FROM rank_popularity
+WHERE ranking=1
+
+6. **Calculate the number of trips each month.**
+
+SELECT
+  EXTRACT(YEAR FROM partition_date) as year,
+  EXTRACT(MONTH FROM partition_date) as month,
+  COUNT(trip_id) as total_trip_count
+FROM `bike-451619.tech_homework.bikeshare`
+GROUP BY year, month
+ORDER BY year, month
+
+
+7. **Find the station with the longest average trip duration.**
+
+WITH trip_duration_rank AS (
+  SELECT
+    start_station_id,
+    start_station_name,
+    AVG(duration_minutes) as average_trip_duration,
+    RANK() OVER (ORDER BY AVG(duration_minutes) DESC) as ranking
+  FROM `bike-451619.tech_homework.bikeshare`
+  GROUP BY start_station_id, start_station_name
+)
+SELECT *
+FROM trip_duration_rank
+WHERE ranking=1
+
+
+8. **Find the busiest hour of the day (most trips started).**
+
+WITH busy_rank AS (
+  SELECT
+    partition_hour as hour_of_the_day,
+    COUNT(trip_id) as total_trip_start_count,
+    RANK() OVER (ORDER BY COUNT(trip_id) DESC) as ranking
+  FROM `bike-451619.tech_homework.bikeshare`
+  GROUP BY partition_hour
+)
+SELECT *
+FROM busy_rank
+WHERE ranking=1
+
+
+9. **Identify the day with the highest number of trips.**
+
+WITH highest_trip_rank AS (
+  SELECT
+    partition_date as date,
+    COUNT(trip_id) as total_trip_count,
+    RANK() OVER (ORDER BY COUNT(trip_id) DESC) as ranking
+  FROM `bike-451619.tech_homework.bikeshare`
+  GROUP BY partition_date
+)
+SELECT *
+FROM highest_trip_rank
+WHERE ranking=1
