@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType
 from google.cloud import storage
 import constants
 
@@ -37,19 +38,27 @@ def extract_bikeshare_trips(**kwargs):
         .load()
         
     df = df.where(f"DATE(start_time) = '{prev_day}'")
+    
+    # Perform typecast
+    df= df.withColumn('trip_id', col("trip_id").cast("int")) \
+          .withColumn('bike_id', col("bike_id").cast("int")) \
+          .withColumn('end_station_id', col("end_station_id").cast("int"))
 
     # Create partition columns
-    df = df.withColumn('partition_date', to_date(col("start_time")))
-    df = df.withColumn('partition_hour', hour(col("start_time")))
+    df = df.withColumn('partition_date', to_date(col("start_time"))) \
+           .withColumn('partition_hour', hour(col("start_time")))
 
     # Delete partition before backfilling to ensure idempotency
     storage_client = storage.Client()
     bucket = storage_client.get_bucket('bike-share-hw')
 
-    blobs = bucket.list_blobs(prefix=f'bikeshare/{prev_day}')
+    blobs = bucket.list_blobs(prefix=f'bikeshare/partition_date={prev_day}')
 
+    print(f"Deleting partition for {prev_day}")
     for blob in blobs:
+        print("Deleting...")
         blob.delete()
+    print(f"Completed deletion partition for {prev_day}")
 
     # Write to GCS
     # TODO make bucket configurable
@@ -62,6 +71,6 @@ def extract_bikeshare_trips(**kwargs):
     # Stop the Spark session
     spark.stop()
     
-
+# TODO remove hardcode
 if __name__ == "__main__":
     extract_bikeshare_trips(date_of_run='2024-06-20')
