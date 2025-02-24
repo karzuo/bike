@@ -1,4 +1,4 @@
-# ETL Settings
+# Data Extraction Settings
 DAY_OFFSET = -1  # number of days to offset from given
 PARTITION_COL_1 = "partition_date"  # name of first partition column (date)
 PARTITION_COL_2 = "partition_hour"  # name of second partition column (hour)
@@ -16,6 +16,7 @@ SOURCE_URI_PREFIX = f"gs://{GCS_BUCKET_NAME}/{DATA_NAME}/"  # path of dataset in
 SOURCE_URI = f"gs://{GCS_BUCKET_NAME}/{DATA_NAME}/*"  # uri of dataset in gcs
 SOURCE_DATA_FORMAT = "PARQUET"  # datatype ingested into gcs
 PARTITION_MODE = "AUTO"  # parameter for bigquery external table creation from parquet
+TEMP_URI = f"gs://{GCS_BUCKET_NAME}/" # path to store temporary data which will get deleted
 
 # Bigquery external table config
 BQ_PROJECT_ID = "bike-451619"  # project id data

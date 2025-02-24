@@ -14,9 +14,9 @@ from scripts.create_biglake_tables import create_biglake_table
 with DAG(
     dag_id="bikeshare_etl",
     start_date=datetime(year=2023, month=12, day=13, hour=0, minute=0),
-    schedule="@daily",
-    catchup=False,
-    max_active_runs=1,
+    schedule_interval="@daily",
+    catchup=True,
+    max_active_runs=5,
     render_template_as_native_obj=True,
 ) as dag:
 
