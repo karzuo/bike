@@ -21,6 +21,10 @@ bike/
 |-- README.md                      # Project documentation (this file)
 ```
 
+### Configuration file
+* The configuration file is `constants.py` in the scripts folder. It consists of all configurations and constants used in the airflow operators code. (i.e. `extract_bikeshare_trips.py` and `create_biglake_tables.py`)
+* However, for the configurations of the DAG itself (ie schedule_interval, catchup etc), this can be done directly on the DAG paremeters in `bikeshare_etl.py` in the `dags` folder.
+
 ## Pre-requisites
 Before you start, make sure you have the following installed:
 
@@ -82,125 +86,37 @@ In GCP, make sure to have the following resources ready:
     Observe that the schedule is set to `@daily` as per our code.
     Since we set `catchup=True` in the DAG settings at `bikeshare_etl.py`, Airflow will attempt to backfill from the last partition that ran. In this case, it should be from `2023-12-13` for the data in `2023-12-12` (date of first record in the dataset)
 
+## Manual Backfill
+If manual backfilling of data is desired, go to Docker > Containers. Click on the 3 dots button under Actions for the airflow-webserver contain, then `Open in terminal`. 
 
+Use the command below to perform backfill:
+```
+airflow dags backfill bikeshare_etl -s [start_date] -e [end_date]
 
+For example,
+airflow dags backfill bikeshare_etl -s '2024-05-01' -e '2024-05-03'
+```
 
+## How the ETL Pipeline Works
+### Extraction:
 
-bash
-Copy
-git clone https://github.com/your-repo-name.git
-cd your-repo-name
-2. Set up Google Cloud Authentication
-The ETL pipeline will need to authenticate using a service account. Follow these steps:
+Data is extracted from the bigquery-public-data.austin_bikeshare.bikeshare_trips table in BigQuery for the previous day. The data is partitioned by date and hour.
 
-Create a service account in Google Cloud with the necessary permissions (BigQuery, GCS access).
-Download the service account JSON key file and place it in the scripts/ directory as service_account.json.
-3. Configure Airflow (Docker Compose)
-The project uses Docker Compose to run Apache Airflow. To configure the services:
-
-Open the docker-compose.yml file and ensure the Airflow web server and scheduler configurations are correct.
-The Airflow web server will be available at http://localhost:8080 by default.
-4. Install Python Dependencies
-Install the necessary Python dependencies by using requirements.txt:
-
-bash
-Copy
-pip install -r requirements.txt
-5. Build and Start Docker Containers
-Once everything is set up, build the Docker container and start the services using Docker Compose:
-
-bash
-Copy
-docker-compose up --build
-This will:
-
-Build the Airflow Docker containers (web server and scheduler).
-Start the services and expose the Airflow UI at http://localhost:8080.
-6. Trigger the Airflow DAG
-Once the services are up and running, you can trigger the ETL pipeline DAG from the Airflow UI:
-
-Open the Airflow UI at http://localhost:8080.
-Find the DAG bikeshare_etl and trigger it manually or wait for it to run on the next scheduled time (daily).
-7. Monitor DAG Execution
-You can monitor the execution of the ETL pipeline in the Airflow UI. Check for task success, failure, or logs for debugging.
-
-How the ETL Pipeline Works
-Extraction:
-
-Data is extracted from the bigquery-public-data.austin_bikeshare.bikeshare_trips table in BigQuery for the previous day.
-The data is partitioned by date and hour.
-Transformation:
+### Transformation:
 
 The data is processed using Python/Spark.
-It is stored in Parquet format on Google Cloud Storage (GCS) with a partitioned directory structure: gs://your-bucket-name/bikeshare/YYYY-MM-DD/HH/data.parquet.
-Loading:
+It is stored in Parquet format on Google Cloud Storage (GCS) with a partitioned directory structure: 
+`gs://your-bucket-name/bikeshare/partition_date=YYYY-MM-DD/partition_hour=HH/data.parquet`
+
+### Loading:
 
 An external BigLake table is created in BigQuery that references the partitioned data stored in GCS.
 The external table schema matches the data structure, allowing for efficient querying and analysis.
-Scheduling:
+
+### Scheduling:
 
 The entire pipeline is automated with Apache Airflow. The DAG is scheduled to run once per day, extracting, transforming, and storing the data for the previous day.
-Running the Project Without Docker (Optional)
-If you prefer not to use Docker, you can run the Airflow services locally by setting up Apache Airflow on your machine.
 
-Install Apache Airflow using pip:
-
-bash
-Copy
-pip install apache-airflow
-Set up the Airflow environment (refer to the Airflow documentation for details).
-
-Initialize the Airflow database:
-
-bash
-Copy
-airflow db init
-Start the Airflow web server:
-
-bash
-Copy
-airflow webserver --port 8080
-Start the Airflow scheduler:
-
-bash
-Copy
-airflow scheduler
-SQL Queries for Data Analysis
-After the data is loaded into BigQuery, you can run the following SQL queries to analyze the data:
-
-Find the total number of trips for each day.
-Calculate the average trip duration for each day.
-Identify the top 5 stations with the highest number of trip starts.
-Find the average number of trips per hour of the day.
-Determine the most common trip route (start station to end station).
-Calculate the number of trips each month.
-Find the station with the longest average trip duration.
-Find the busiest hour of the day (most trips started).
-Identify the day with the highest number of trips.
-License
-This project is licensed under the MIT License.
-
-Acknowledgments
-Google Cloud for providing the BigQuery and GCS services.
-Apache Airflow for the orchestration of the ETL pipeline.
-
-
-
-
-
-
-
-
-
-
-* create a dataset in same location as the gcs bucket if not yet created.
-* big lake not created due to costs, but is just one small step
-
-* set google credentials env var
-
-
-Setup Airflow:
-generate fernet key and replace in docker-compose
-docker-compose run --rm airflow-webserver airflow db init
-docker-compose run --rm airflow-webserver airflow users create --role Admin --username admin --email admin --firstname admin --lastname admin --password admin
-docker-compose up
+## SQL Queries for Data Analysis
+After the data is loaded into BigQuery, we perform data analysis with the data directly on Bigquery.
+The SQLs can be found in `scripts/sql.txt`

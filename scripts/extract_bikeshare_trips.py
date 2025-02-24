@@ -72,18 +72,23 @@ def extract_bikeshare_trips(**kwargs):
     print(f"Completed deletion partition for {prev_day}")
 
     # Generate a unique suffix using the current timestamp or UUID
-    temp_suffix = f"temp_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{str(uuid.uuid4())}"
+    temp_suffix = (
+        f"temp_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{str(uuid.uuid4())}"
+    )
     temp_output_path = os.path.join(constants.TEMP_URI, temp_suffix)
 
     # Write to a temporary location in GCS to allow concurrent job runs without interference
     df.write.format("parquet").mode("append").partitionBy(
         constants.PARTITION_COL_1, constants.PARTITION_COL_2
     ).save(temp_output_path)
-    
+
     # Copy each object to the final destination
     blobs = bucket.list_blobs(prefix=temp_suffix)
     for blob in blobs:
-        bucket.rename_blob(blob, new_name=blob.name.replace(f"{temp_suffix}/", f"{constants.DATA_NAME}/"))
+        bucket.rename_blob(
+            blob,
+            new_name=blob.name.replace(f"{temp_suffix}/", f"{constants.DATA_NAME}/"),
+        )
 
     # Stop the Spark session
     spark.stop()
