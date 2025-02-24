@@ -34,7 +34,7 @@ RUN wget --no-verbose https://download.oracle.com/java/17/archive/jdk-17.0.12_li
     && mv jdk-17.0.12 /usr/lib/jvm/java-17-openjdk \
     && rm jdk-17.0.12_linux-aarch64_bin.tar.gz
 
-# Download jars
+# Download JARS
 # Download the GCS connector JAR (for GCS integration with Spark)
 RUN wget -P $AIRFLOW_HOME/jars/ https://github.com/GoogleCloudDataproc/hadoop-connectors/releases/download/v3.0.4/gcs-connector-3.0.4-shaded.jar
 

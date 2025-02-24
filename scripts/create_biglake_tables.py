@@ -1,21 +1,22 @@
 from google.cloud import bigquery
 
+from scripts import constants
+
 
 def create_biglake_table():
     # Construct a BigQuery client object.
     client = bigquery.Client()
-
-    # TODO make configurable
-    table_id = "bike-451619.tech_homework.bikeshare"
+    table_ref = constants.BQ_TABLE_REF
 
     # Format of data in GCS
-    external_source_format = "PARQUET"
+    external_source_format = constants.SOURCE_DATA_FORMAT
 
     # URI of data in GCS
-    source_uris = ["gs://bike-share-hw/bikeshare/*"]
+    source_uris = [constants.SOURCE_URI]
 
     # Create ExternalConfig object with external source format
     external_config = bigquery.ExternalConfig(external_source_format)
+
     # Set source_uris that point to your data in Google Cloud
     external_config.source_uris = source_uris
 
@@ -34,21 +35,21 @@ def create_biglake_table():
     ]
     external_config.schema = schema
 
-    # # partition configs
+    # partition configs
     partition_options = bigquery.HivePartitioningOptions()
-    partition_options.mode = "AUTO"
-    partition_options.source_uri_prefix = "gs://bike-share-hw/bikeshare/"
+    partition_options.mode = constants.PARTITION_MODE
+    partition_options.source_uri_prefix = constants.SOURCE_URI_PREFIX
     external_config.hive_partitioning = partition_options
 
     # Delete the existing external table if it exists
     try:
-        client.delete_table(table_id, not_found_ok=True)
-        print(f"Table {table_id} deleted.")
+        client.delete_table(table_ref, not_found_ok=True)
+        print(f"Table {table_ref} deleted.")
     except Exception as e:
-        print(f"Error deleting table {table_id}: {e}")
+        print(f"Error deleting table {table_ref}: {e}")
 
     # Set the external data configuration of the table
-    table = bigquery.Table(table_id)
+    table = bigquery.Table(table_ref)
     table.external_data_configuration = external_config
     table = client.create_table(table)  # Make an API request.
 
