@@ -1,4 +1,5 @@
 from google.cloud import bigquery
+from google.cloud.exceptions import Conflict
 
 from scripts import constants
 
@@ -49,9 +50,15 @@ def create_biglake_table():
         print(f"Error deleting table {table_ref}: {e}")
 
     # Set the external data configuration of the table
-    table = bigquery.Table(table_ref)
-    table.external_data_configuration = external_config
-    table = client.create_table(table)  # Make an API request.
+    try:
+        table = bigquery.Table(table_ref)
+        table.external_data_configuration = external_config
+        table = client.create_table(table)  # Make an API request.
+    except Conflict:
+        # Ignore if the table already exists
+        # This means table was created by another concurrent process after this process has started
+        # which imply that the created table already include data from this thread
+        print(f"Table {table_ref} already exists, ignoring creation.")
 
     print(
         f"Created table with external source format {table.external_data_configuration.source_format}"
