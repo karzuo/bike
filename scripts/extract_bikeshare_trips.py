@@ -8,6 +8,20 @@ from scripts import constants
 
 
 def extract_bikeshare_trips(**kwargs):
+    """
+    This function ingest a bikeshare data from bigquery, transformed and then saved to GCS bucket
+    using spark. It saves the data as parquet in GCS bucket. The data ingested is 1 day worth,
+    and is the data of the previous day of the pipeline run date (given as parameter)
+    
+    Before saving, the corresponding partition of data is deleted (if exists). This is to ensure
+    the data ingested in properly updated and the pipeline is idempotent.
+    
+    During the saving process by spark, the data is first saved into a temporary location 
+    unique to this run. This is to make the pipeline robust and able to run multiple of this pipeline
+    concurrently for different dates.
+    
+    kwargs["date_of_run"] (str): date when the pipelin is meant to run
+    """
     date_of_run = datetime.strptime(kwargs["date_of_run"], "%Y-%m-%d").date()
 
     # Create Spark session with configurations from constants.py

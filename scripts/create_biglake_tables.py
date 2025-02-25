@@ -5,6 +5,14 @@ from scripts import constants
 
 
 def create_biglake_table():
+    """This function creates a bigquery external table to reference the data
+    stored in GCS. It first delete the table (if exists) then re-create it.
+    
+    The concurrency of this function can only be at most 1. Running more than
+    1 instance of this function in parallel has the risk of inconsistent table state.
+    For example, when 2 instances have deleted the table, one of it re-created first,
+    then second will find the external table already exist and fails to re-create.
+    """
     # Construct a BigQuery client object.
     client = bigquery.Client()
     table_ref = constants.BQ_TABLE_REF
@@ -55,10 +63,7 @@ def create_biglake_table():
         table.external_data_configuration = external_config
         table = client.create_table(table)  # Make an API request.
     except Conflict:
-        # Ignore if the table already exists
-        # This means table was created by another concurrent process after this process has started
-        # which imply that the created table already include data from this thread
-        print(f"Table {table_ref} already exists, ignoring creation.")
+        print(f"Table {table_ref} already exists.")
 
     print(
         f"Created table with external source format {table.external_data_configuration.source_format}"

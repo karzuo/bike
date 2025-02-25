@@ -19,6 +19,10 @@ with DAG(
     max_active_runs=5,
     render_template_as_native_obj=True,
 ) as dag:
+    """This is an Airflow DAG that ingest data daily from the public bikeshare data set
+    into GCS bucket in parquet format partitioned by date and hour (Operator 1), then made accessible
+    in bigquery by creating an external table. (Operator 2).
+    """
 
     extract_data = PythonOperator(
         dag=dag,
@@ -28,7 +32,10 @@ with DAG(
     )
 
     create_table = PythonOperator(
-        dag=dag, task_id="create_table", python_callable=create_biglake_table
+        dag=dag, 
+        task_id="create_table", 
+        python_callable=create_biglake_table,
+        task_concurrency=1 # this task need to be executed atomically
     )
 
     # Set task dependencies

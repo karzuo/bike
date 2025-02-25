@@ -30,6 +30,7 @@ Before you start, make sure you have the following installed:
 
 1. **Docker**: To build and run containers.
 1. **Docker Compose**: To orchestrate multi-container applications.
+1. **Google Cloud SDK**: To call Google Cloud API via command line
 
 In GCP, make sure to have the following resources ready:
 
@@ -116,6 +117,14 @@ The external table schema matches the data structure, allowing for efficient que
 ### Scheduling:
 
 The entire pipeline is automated with Apache Airflow. The DAG is scheduled to run once per day, extracting, transforming, and storing the data for the previous day.
+
+### Concurrency
+
+The pipeline is designed to be able to run multiple instances concurrently. To configure the number of
+maximum concurrent run, go to code of the DAG at `bikeshare_etl.py`. In the definition of the DAG,
+configure the value of `max_active_runs`. Take note however that for the `create_table` operator,
+it can only run 1 instance at any time, as it runs the risk of causing inconsistent table state if
+multiple instances of the operator run concurrently.
 
 ## SQL Queries for Data Analysis
 After the data is loaded into BigQuery, we perform data analysis with the data directly on Bigquery.
