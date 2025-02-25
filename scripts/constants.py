@@ -31,7 +31,7 @@ BQ_TABLE_REF = (
 # Spark configs
 APP_NAME = "BikeShareEtl"
 MASTER = "local[*]"
-TIME_ZONE = "UTC"
+TIME_ZONE = "UTC" # This is only for spark. Make sure you check your data, SQL or airflow matches.
 SPARK_JARS = [
     "jars/spark-3.5-bigquery-0.42.0.jar",
     "jars/gcs-connector-3.0.4-shaded.jar",
