@@ -92,6 +92,10 @@ In GCP, make sure to have the following resources ready:
     Observe that the schedule is set to `@daily` as per our code.
     Since we set `catchup=True` in the DAG settings at `bikeshare_etl.py`, Airflow will attempt to backfill from the last partition that ran. In this case, it should be from `2023-12-13` for the data in `2023-12-12` (date of first record in the dataset).
 
+    If the DAG is paused, turn it on to ensure that the DAG  runs on schedule.
+1. Once you are done, you can shutdown the set up by pressing `Control+C` to shutdown the containers.
+Note that the data are persisted, since we have mounted the data to local disk in the `docker-compose.yml` configuration.
+
 ## Manual Backfill
 If manual backfilling of data is desired, go to Docker > Containers. Click on the 3 dots button under Actions for the airflow-webserver contain, then `Open in terminal`. 
 

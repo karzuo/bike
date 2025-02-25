@@ -8,7 +8,7 @@ ENV AIRFLOW_GID=50000
 
 # Install necessary Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy your DAGs and scripts into the container
 COPY dags/ $AIRFLOW_HOME/dags/
