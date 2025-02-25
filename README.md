@@ -140,3 +140,15 @@ multiple instances of the operator run concurrently.
 ## SQL Queries for Data Analysis
 After the data is loaded into BigQuery, we perform data analysis with the data directly on Bigquery.
 The SQLs can be found in `scripts/sql.txt`. Before you run any of the SQLs on Bigquery, please remember to change the table reference to the one you have created.
+
+## Troubleshoot
+As far as we make this project as painless and perfect to set up and run. There may be times that issue beyond our control can happen.
+
+1. Error related to `/var/lib/postgresql/data` may happen if you happen to run the commands in a non-linux environment, such as windows or that your system does not provide permission to access it. 
+    * To fix this, in the `docker-compose.yml` file, look for `/var/lib/postgresql/data` and change it to another location or path that is compatible with your local system, with permission.
+    * Alternatively, disable the mounting by removing the `volume` section (Line 9 and 10)
+
+1. Error related to downloading of JAR files when running `docker-compose build`. 
+    * The URL to download the JARS may be unavailable during unforseen circumstances such as server down or that maybe the file may have been removed.
+    * This may not be straightforward to fix, but the URL to download the JAR could be changed in the `docker-compose.yml` file to another one providing the same JAR file.
+    * Alternatively, other versions of the file may be used as a substitute. We don't cover how to update this here.
